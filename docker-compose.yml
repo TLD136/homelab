@@ -1,0 +1,129 @@
+services:
+  mariadb:
+    restart: unless-stopped
+    image: mariadb:latest
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    volumes:
+      - ./mariadb-storage:/var/lib/mysql
+    networks:
+      backend:
+        ipv4_address: 172.1.0.2
+    secrets:
+      - db-root-password
+      - db-password
+      - db-user
+      - db-database
+    environment:
+      - MYSQL_ROOT_PASSWORD=/run/secrets/db-root-password
+      - MYSQL_PASSWORD=/run/secrets/db-password
+      - MYSQL_USER=/run/secrets/db-user
+      - MYSQL_DATABASE=/run/secrets/db-database
+
+  nextcloud:
+    restart: unless-stopped
+    image: nextcloud:latest
+    volumes:
+      - ./nextcloud-storage:/var/www/html
+    networks:
+      backend:
+        ipv4_address: 172.1.0.3
+    ports:
+      - 80:80
+    secrets:
+      - db-password
+      - db-user
+      - db-database
+      - db-host
+    environment:
+      - MYSQL_PASSWORD=/run/secrets/db-password
+      - MYSQL_USER=/run/secrets/db-user
+      - MYSQL_DATABASE=/run/secrets/db-database
+      - MYSQL_HOST=/run/secrets/db-host
+
+  jenkins:
+    restart: unless-stopped
+    image: jenkins/jenkins:latest
+    volumes:
+      - "./jenkins-storage:/var/jenkins_home"
+    networks:
+      backend:
+        ipv4_address: 172.1.0.4
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+
+  homeassistant:
+    restart: unless-stopped
+    image: "homeassistant/home-assistant:latest"
+    volumes:
+      - ./homeassistant-storage:/config
+    networks:
+      backend:
+        ipv4_address: 172.1.0.5
+    ports:
+      - '8123:8123'
+
+  nginxproxymanager:
+    restart: unless-stopped
+    image: 'jc21/nginx-proxy-manager:latest'
+    volumes:
+      - ./nginxproxymanager-storage:/data
+      - ./letsencrypt-storage:/etc/letsencrypt
+    networks:
+      backend:
+        ipv4_address: 172.1.0.6
+      frontend:
+    ports:
+      - '80:80'
+      - '81:81'
+      - '443:443'
+
+  portainer:
+    restart: unless-stopped
+    image: portainer/portainer-ce:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./portainer-storage:/data
+    networks:
+      backend:
+        ipv4_address: 172.1.0.7
+    ports:
+      - '8000:8000'
+      - '9443:9443'
+
+  dashy:
+    restart: unless-stopped
+    image: lissy93/dashy
+    volumes:
+      - ./dashy-storage:/app/public
+    networks:
+      backend:
+        ipv4_address: 172.1.0.8
+    ports:
+      - 80:80
+    environment:
+      - NODE_ENV=production
+
+networks:
+  frontend:
+    driver: bridge
+
+  backend:
+    attachable: true
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.1.0.0/24
+          gateway: 172.1.0.1
+
+secrets:
+  db-root-password:
+    file: ./secrets/MYSQL_ROOT_PASSWORD.txt
+  db-password:
+    file: ./secrets/MYSQL_PASSWORD.txt
+  db-user:
+    file: ./secrets/MYSQL_USER.txt
+  db-database:
+    file: ./secrets/MYSQL_DATABASE.txt
+  db-host:
+    file: ./secrets/MYSQL_HOST.txt

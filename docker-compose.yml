@@ -14,10 +14,10 @@ services:
       - db-user
       - db-database
     environment:
-      - MYSQL_ROOT_PASSWORD=/run/secrets/db-root-password
-      - MYSQL_PASSWORD=/run/secrets/db-password
-      - MYSQL_USER=/run/secrets/db-user
-      - MYSQL_DATABASE=/run/secrets/db-database
+      - MYSQL_ROOT_PASSWORD_FILE=/run/secrets/db-root-password
+      - MYSQL_PASSWORD_FILE=/run/secrets/db-password
+      - MYSQL_USER_FILE=/run/secrets/db-user
+      - MYSQL_DATABASE_FILE=/run/secrets/db-database
 
   nextcloud:
     restart: unless-stopped
@@ -34,38 +34,27 @@ services:
       - db-user
       - db-database
       - db-host
-    environment:
-      - MYSQL_PASSWORD=/run/secrets/db-password
-      - MYSQL_USER=/run/secrets/db-user
-      - MYSQL_DATABASE=/run/secrets/db-database
-      - MYSQL_HOST=/run/secrets/db-host
+    depends_on:
+      - mariadb
 
-  jenkins:
+  gitlab:
     restart: unless-stopped
-    image: jenkins/jenkins:latest
+    image: gitlab/gitlab-ce:latest
     volumes:
-      - "./jenkins-storage:/var/jenkins_home"
+      - ./gitlab-storage/config:/etc/gitlab
+      - ./gitlab-storage/logs:/var/log/gitlab
+      - ./gitlab-storage/data:/var/opt/gitlab
     networks:
       backend:
         ipv4_address: 172.1.0.4
     ports:
-      - "8080:8080"
-      - "50000:50000"
-
-  homeassistant:
-    restart: unless-stopped
-    image: "homeassistant/home-assistant:latest"
-    volumes:
-      - ./homeassistant-storage:/config
-    networks:
-      backend:
-        ipv4_address: 172.1.0.5
-    ports:
-      - '8123:8123'
+      - 80:80
+      - 443:443
+      - 22:22
 
   nginxproxymanager:
     restart: unless-stopped
-    image: 'jc21/nginx-proxy-manager:latest'
+    image: jc21/nginx-proxy-manager:latest
     volumes:
       - ./nginxproxymanager-storage:/data
       - ./letsencrypt-storage:/etc/letsencrypt
@@ -74,9 +63,9 @@ services:
         ipv4_address: 172.1.0.6
       frontend:
     ports:
-      - '80:80'
-      - '81:81'
-      - '443:443'
+      - 80:80
+      - 81:81
+      - 443:443
 
   portainer:
     restart: unless-stopped
@@ -88,21 +77,9 @@ services:
       backend:
         ipv4_address: 172.1.0.7
     ports:
-      - '8000:8000'
-      - '9443:9443'
-
-  dashy:
-    restart: unless-stopped
-    image: lissy93/dashy
-    volumes:
-      - ./dashy-storage:/app/public
-    networks:
-      backend:
-        ipv4_address: 172.1.0.8
-    ports:
-      - 80:80
-    environment:
-      - NODE_ENV=production
+      - 8000:8000
+      - 9443:9443
+      - 9000:9000
 
 networks:
   frontend:

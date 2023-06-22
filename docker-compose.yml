@@ -27,8 +27,7 @@ services:
     networks:
       backend:
         ipv4_address: 172.1.0.3
-    ports:
-      - 80:80
+      frontend:
     secrets:
       - db-password
       - db-user
@@ -47,10 +46,20 @@ services:
     networks:
       backend:
         ipv4_address: 172.1.0.4
+      frontend:
     ports:
-      - 80:80
-      - 443:443
-      - 22:22
+      - "2222:22"
+
+  homepage:
+    restart: unless-stopped
+    image: ghcr.io/benphelps/homepage:latest
+    volumes:
+      - ./homepage-storage:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      backend:
+        ipv4_address: 172.1.0.5
+      frontend:
 
   nginxproxymanager:
     restart: unless-stopped
@@ -76,10 +85,15 @@ services:
     networks:
       backend:
         ipv4_address: 172.1.0.7
-    ports:
-      - 8000:8000
-      - 9443:9443
-      - 9000:9000
+
+  gitlab-runner:
+    restart: unless-stopped
+    image: gitlab/gitlab-runner:latest
+    volumes:
+      - ./gitlab-storage/runner-config:/etc/gitlab-runner
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      frontend:
 
 networks:
   frontend:

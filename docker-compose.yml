@@ -21,7 +21,7 @@ services:
 
   nextcloud:
     restart: unless-stopped
-    image: nextcloud:latest
+    image: nextcloud:fpm-alpine
     volumes:
       - ./nextcloud-storage:/var/www/html
     networks:
@@ -78,7 +78,7 @@ services:
 
   portainer:
     restart: unless-stopped
-    image: portainer/portainer-ce:latest
+    image: portainer/portainer-ce:alpine
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./portainer-storage:/data

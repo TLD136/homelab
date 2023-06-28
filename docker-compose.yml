@@ -21,7 +21,7 @@ services:
 
   nextcloud:
     restart: unless-stopped
-    image: nextcloud:fpm-alpine
+    image: nextcloud:latest
     volumes:
       - ./nextcloud-storage:/var/www/html
     networks:

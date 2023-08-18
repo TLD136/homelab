@@ -8,6 +8,8 @@ services:
     networks:
       backend:
         ipv4_address: 172.1.0.2
+    ports:
+      - 3306:3306
     secrets:
       - db-root-password
       - db-password

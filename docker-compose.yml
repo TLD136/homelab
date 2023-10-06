@@ -27,9 +27,9 @@ services:
     volumes:
       - ./nextcloud-storage:/var/www/html
     networks:
+      frontend:
       backend:
         ipv4_address: 172.1.0.3
-      frontend:
     secrets:
       - db-password
       - db-user
@@ -46,22 +46,22 @@ services:
       - ./gitlab-storage/logs:/var/log/gitlab
       - ./gitlab-storage/data:/var/opt/gitlab
     networks:
+      frontend:
       backend:
         ipv4_address: 172.1.0.4
-      frontend:
     ports:
       - "2222:22"
 
   homepage:
     restart: unless-stopped
-    image: ghcr.io/benphelps/homepage:latest
+    image: ghcr.io/gethomepage/homepage:latest
     volumes:
       - ./homepage-storage:/app/config
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
+      frontend:
       backend:
         ipv4_address: 172.1.0.5
-      frontend:
 
   nginxproxymanager:
     restart: unless-stopped
@@ -70,9 +70,9 @@ services:
       - ./nginxproxymanager-storage:/data
       - ./letsencrypt-storage:/etc/letsencrypt
     networks:
+      frontend:
       backend:
         ipv4_address: 172.1.0.6
-      frontend:
     ports:
       - 80:80
       - 81:81
@@ -91,11 +91,23 @@ services:
   gitlab-runner:
     restart: unless-stopped
     image: gitlab/gitlab-runner:latest
+    networks:
+      frontend:
     volumes:
       - ./gitlab-storage/runner-config:/etc/gitlab-runner
+      - ./gitlab-storage/runner-cache:/home/gitlab-runner
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  watchtower:
+    image: containrrr/watchtower
+    volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       frontend:
+    environment:
+      - TZ=Europe/Amsterdam
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_SCHEDULE=0 0 12 * * *
 
 networks:
   frontend:

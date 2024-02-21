@@ -2,7 +2,7 @@ services:
   mariadb:
     restart: unless-stopped
     image: mariadb:latest
-    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW --character-set-server=utf8
     volumes:
       - ./mariadb-storage:/var/lib/mysql
     networks:
@@ -35,8 +35,14 @@ services:
       - db-user
       - db-database
       - db-host
+      - redis-password
+    environment:
+      - REDIS_HOST=172.1.0.8
+      - REDIS_HOST_PORT=6379
+      - REDIS_HOST_PASSWORD_FILE=/run/secrets/redis-password
     depends_on:
       - mariadb
+      - redis
 
   gitlab:
     restart: unless-stopped
@@ -98,16 +104,62 @@ services:
       - ./gitlab-storage/runner-cache:/home/gitlab-runner
       - /var/run/docker.sock:/var/run/docker.sock
 
-  watchtower:
-    image: containrrr/watchtower
+  redis:
+    restart: unless-stopped
+    image: redis:latest
+    command:
+      [
+        "bash",
+        "-c",
+        ' docker-entrypoint.sh --requirepass "$$(cat $$REDIS_PASSWORD_FILE)" '
+      ]
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - ./redis-storage/data:/data
+      - ./redis-storage/config:/usr/local/etc/redis/
+    networks:
+      backend:
+        ipv4_address: 172.1.0.8
+    ports:
+      - 6379:6379
+    secrets:
+      - redis-password
+    environment:
+      - REDIS_PASSWORD_FILE=/run/secrets/redis-password
+
+  pihole:
+    restart: unless-stopped
+    image: pihole/pihole:latest
+    environment:
+      TZ: 'Europe/Amsterdam'
+      WEBPASSWORD_FILE: /run/secrets/pihole-password
+    volumes:
+      - './pihole-storage/etc-pihole:/etc/pihole'
+      - './pihole-storage/etc-dnsmasq.d:/etc/dnsmasq.d'
+      #   https://github.com/pi-hole/docker-pi-hole#note-on-capabilities
+      # cap_add:
+      # - NET_ADMIN # Required if you are using Pi-hole as your DHCP server, else not needed
     networks:
       frontend:
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      # - "67:67/udp" # Only required if you are using Pi-hole as your DHCP server
+      # - "8080:80/tcp"
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  watchtower:
+    restart: unless-stopped
+    image: containrrr/watchtower:latest
     environment:
       - TZ=Europe/Amsterdam
       - WATCHTOWER_CLEANUP=true
       - WATCHTOWER_SCHEDULE=0 0 12 * * *
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      frontend:
+
 
 networks:
   frontend:
@@ -132,3 +184,7 @@ secrets:
     file: ./secrets/MYSQL_DATABASE.txt
   db-host:
     file: ./secrets/MYSQL_HOST.txt
+  redis-password:
+    file: ./secrets/REDIS_PASSWORD.txt
+  pihole-password:
+    file: ./secrets/PIHOLE_PASSWORD.txt

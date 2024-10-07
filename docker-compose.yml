@@ -126,6 +126,40 @@ services:
     environment:
       - REDIS_PASSWORD_FILE=/run/secrets/redis-password
 
+  syncthing:
+    restart: unless-stopped
+    image: syncthing/syncthing:latest
+    volumes:
+      - './syncthing-storage:/var/syncthing'
+    network_mode: host
+    #ports:
+#  - 8384:8384 # Web UI
+#     - 22000:22000/tcp # TCP file transfers
+#     - 22000:22000/udp # QUIC file transfers
+#     - 21027:21027/udp # Receive local discovery broadcasts
+
+  open-webui:
+    restart: unless-stopped
+    image: ghcr.io/open-webui/open-webui:main
+    volumes:
+      - './open-webui-storage:/app/backend/data'
+    networks:
+      frontend:
+      backend:
+        ipv4_address: 172.1.0.9
+     
+  ollama:
+    restart: unless-stopped
+    image: ollama/ollama
+    volumes:
+      - ./ollama-storage:/root/.ollama
+    networks:
+      frontend:
+      backend:
+        ipv4_address: 172.1.0.10
+    ports:
+      - 11434:11434
+
   pihole:
     restart: unless-stopped
     image: pihole/pihole:latest

@@ -10,16 +10,11 @@ services:
         ipv4_address: 172.1.0.2
     ports:
       - 3306:3306
-    secrets:
-      - db-root-password
-      - db-password
-      - db-user
-      - db-database
     environment:
-      - MYSQL_ROOT_PASSWORD_FILE=/run/secrets/db-root-password
-      - MYSQL_PASSWORD_FILE=/run/secrets/db-password
-      - MYSQL_USER_FILE=/run/secrets/db-user
-      - MYSQL_DATABASE_FILE=/run/secrets/db-database
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
 
   nextcloud:
     restart: unless-stopped
@@ -30,19 +25,17 @@ services:
       frontend:
       backend:
         ipv4_address: 172.1.0.3
-    secrets:
-      - db-password
-      - db-user
-      - db-database
-      - db-host
-      - redis-password
     environment:
-      - REDIS_HOST=172.1.0.8
-      - REDIS_HOST_PORT=6379
-      - REDIS_HOST_PASSWORD_FILE=/run/secrets/redis-password
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_HOST=${MYSQL_HOST}
+      - REDIS_HOST=${VALKEY_HOST}
+      - REDIS_HOST_PORT=${VALKEY_HOST_PORT}
+      - VALKEY_HOST_PASSWORD=${VALKEY_HOST_PASSWORD}
     depends_on:
       - mariadb
-      - redis
+      - valkey
 
   gitlab:
     restart: unless-stopped
@@ -68,6 +61,8 @@ services:
       frontend:
       backend:
         ipv4_address: 172.1.0.5
+    environment:
+      - HOMEPAGE_ALLOWED_HOSTS=homepage.tld136.duckdns.org
 
   nginxproxymanager:
     restart: unless-stopped
@@ -104,27 +99,19 @@ services:
       - ./gitlab-storage/runner-cache:/home/gitlab-runner
       - /var/run/docker.sock:/var/run/docker.sock
 
-  redis:
+  valkey:
     restart: unless-stopped
-    image: redis:latest
-    command:
-      [
-        "bash",
-        "-c",
-        ' docker-entrypoint.sh --requirepass "$$(cat $$REDIS_PASSWORD_FILE)" '
-      ]
+    image: valkey/valkey:alpine
     volumes:
-      - ./redis-storage/data:/data
-      - ./redis-storage/config:/usr/local/etc/redis/
+      - ./valkey-storage/data:/data
+      - ./valkey-storage/config:/etc/valkey/
     networks:
       backend:
         ipv4_address: 172.1.0.8
     ports:
       - 6379:6379
-    secrets:
-      - redis-password
     environment:
-      - REDIS_PASSWORD_FILE=/run/secrets/redis-password
+      - VALKEY_PASSWORD=${VALKEY_HOST_PASSWORD}
 
   syncthing:
     restart: unless-stopped
@@ -133,52 +120,32 @@ services:
       - './syncthing-storage:/var/syncthing'
     network_mode: host
     #ports:
-#  - 8384:8384 # Web UI
-#     - 22000:22000/tcp # TCP file transfers
-#     - 22000:22000/udp # QUIC file transfers
-#     - 21027:21027/udp # Receive local discovery broadcasts
-
-  open-webui:
-    restart: unless-stopped
-    image: ghcr.io/open-webui/open-webui:main
-    volumes:
-      - './open-webui-storage:/app/backend/data'
-    networks:
-      frontend:
-      backend:
-        ipv4_address: 172.1.0.9
-     
-  ollama:
-    restart: unless-stopped
-    image: ollama/ollama
-    volumes:
-      - ./ollama-storage:/root/.ollama
-    networks:
-      frontend:
-      backend:
-        ipv4_address: 172.1.0.10
-    ports:
-      - 11434:11434
+    #  - 8384:8384 # Web UI
+    #     - 22000:22000/tcp # TCP file transfers
+    #     - 22000:22000/udp # QUIC file transfers
+    #     - 21027:21027/udp # Receive local discovery broadcasts
 
   pihole:
     restart: unless-stopped
     image: pihole/pihole:latest
     environment:
-      TZ: 'Europe/Amsterdam'
-      WEBPASSWORD_FILE: /run/secrets/pihole-password
+      - TZ=Europe/Amsterdam
+      - WEBPASSWORD=${PIHOLE_PASSWORD}
     volumes:
       - './pihole-storage/etc-pihole:/etc/pihole'
       - './pihole-storage/etc-dnsmasq.d:/etc/dnsmasq.d'
       #   https://github.com/pi-hole/docker-pi-hole#note-on-capabilities
-      # cap_add:
+    cap_add:
       # - NET_ADMIN # Required if you are using Pi-hole as your DHCP server, else not needed
+      - SYS_TIME # NTP client
+      - SYS_NICE # for higher priority
     networks:
       frontend:
     ports:
       - "53:53/tcp"
       - "53:53/udp"
       # - "67:67/udp" # Only required if you are using Pi-hole as your DHCP server
-      # - "8080:80/tcp"
+      # - "8080:80/tcp"a
     labels:
       - "com.centurylinklabs.watchtower.enable=false"
 
@@ -206,19 +173,3 @@ networks:
       config:
         - subnet: 172.1.0.0/24
           gateway: 172.1.0.1
-
-secrets:
-  db-root-password:
-    file: ./secrets/MYSQL_ROOT_PASSWORD.txt
-  db-password:
-    file: ./secrets/MYSQL_PASSWORD.txt
-  db-user:
-    file: ./secrets/MYSQL_USER.txt
-  db-database:
-    file: ./secrets/MYSQL_DATABASE.txt
-  db-host:
-    file: ./secrets/MYSQL_HOST.txt
-  redis-password:
-    file: ./secrets/REDIS_PASSWORD.txt
-  pihole-password:
-    file: ./secrets/PIHOLE_PASSWORD.txt

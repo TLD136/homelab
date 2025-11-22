@@ -148,10 +148,11 @@ services:
     image: pihole/pihole:latest
     environment:
       - TZ=Europe/Amsterdam
-      - WEBPASSWORD=${PIHOLE_PASSWORD}
+      - FTLCONF_webserver_api_password=${PIHOLE_PASSWORD}
+
     volumes:
       - './pihole-storage/etc-pihole:/etc/pihole'
-      - './pihole-storage/etc-dnsmasq.d:/etc/dnsmasq.d'
+      #- './pihole-storage/etc-dnsmasq.d:/etc/dnsmasq.d'
       #   https://github.com/pi-hole/docker-pi-hole#note-on-capabilities
     cap_add:
       # - NET_ADMIN # Required if you are using Pi-hole as your DHCP server, else not needed
@@ -160,10 +161,17 @@ services:
     networks:
       frontend:
     ports:
+      # DNS Ports
       - "53:53/tcp"
       - "53:53/udp"
-      # - "67:67/udp" # Only required if you are using Pi-hole as your DHCP server
-      # - "8080:80/tcp"a
+      # Default HTTP Port
+      #- "80:80/tcp"
+      # Default HTTPs Port. FTL will generate a self-signed certificate
+      #- "443:443/tcp"
+      # Uncomment the below if using Pi-hole as your DHCP Server
+      #- "67:67/udp"
+      # Uncomment the line below if you are using Pi-hole as your NTP server
+      #- "123:123/udp"
     labels:
       - "com.centurylinklabs.watchtower.enable=false"
 

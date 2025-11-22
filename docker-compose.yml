@@ -147,7 +147,7 @@ services:
     restart: unless-stopped
     image: pihole/pihole:latest
     environment:
-      - TZ=Europe/Amsterdam
+      - TZ=${TZ}
       - FTLCONF_webserver_api_password=${PIHOLE_PASSWORD}
 
     volumes:
@@ -179,7 +179,7 @@ services:
     restart: unless-stopped
     image: containrrr/watchtower:latest
     environment:
-      - TZ=Europe/Amsterdam
+      - TZ=${TZ}
       - WATCHTOWER_CLEANUP=true
       - WATCHTOWER_SCHEDULE=0 0 12 * * *
     volumes:

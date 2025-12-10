@@ -165,15 +165,31 @@ services:
       - "53:53/tcp"
       - "53:53/udp"
       # Default HTTP Port
-      #- "80:80/tcp"
+      # - "80:80/tcp"
       # Default HTTPs Port. FTL will generate a self-signed certificate
-      #- "443:443/tcp"
+      # - "443:443/tcp"
       # Uncomment the below if using Pi-hole as your DHCP Server
-      #- "67:67/udp"
+      # - "67:67/udp"
       # Uncomment the line below if you are using Pi-hole as your NTP server
-      #- "123:123/udp"
+      # - "123:123/udp"
     labels:
       - "com.centurylinklabs.watchtower.enable=false"
+
+  HomeAssistant:
+    privileged: true
+    restart: unless-stopped
+    image: ghcr.io/home-assistant/home-assistant:stable
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ./home-assistant-storage:/config
+      - /etc/localtime:/etc/localtime:ro
+      # For bluetooth integration
+      # - /run/dbus:/run/dbus:ro 
+    networks:
+      frontend:
+      backend:
+        ipv4_address: 172.1.0.9
 
   watchtower:
     restart: unless-stopped

@@ -4,7 +4,8 @@ services:
     image: mariadb:latest
     command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW --character-set-server=utf8
     volumes:
-      - ./mariadb-storage:/var/lib/mysql
+      - ./mariadb-storage/config/my.cnf:/etc/mysql/my.cnf
+      - ./mariadb-storage/database:/var/lib/mysql
     networks:
       backend:
         ipv4_address: 172.1.0.2

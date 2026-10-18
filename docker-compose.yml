@@ -57,7 +57,7 @@ services:
 
   gitlab:
     restart: unless-stopped
-    image: gitlab/gitlab-ce:19.1.1-ce.0
+    image: gitlab/gitlab-ce:19.4.0-ce.0
     volumes:
       - ./gitlab-storage/config:/etc/gitlab
       - ./gitlab-storage/logs:/var/log/gitlab
